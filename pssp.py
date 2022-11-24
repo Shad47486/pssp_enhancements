@@ -201,7 +201,7 @@ def account():
         user_image = Patients_Photos.query.filter_by(mrn=session['mrn']).first()
         print('Account details: ', account.to_json())
         # Show the profile page with account info
-        return render_template('account.html', account=account, user_image=user_image)
+        return render_template('account.html', account=account)
     # User is not loggedin redirect to login page
     return redirect(url_for('login'))
 
@@ -229,12 +229,12 @@ def get_gui_patients():
 @app.route('/insert', methods = ['POST'])
 def insert(): # note this function needs to match name in html form action 
     if request.method == 'POST':
-        mrn = request.form['mrn']
         first_name = request.form['first_name']
         last_name = request.form['last_name']
+        dob = request.form['dob']
         gender = request.form['gender']
         zip_code = request.form['zip_code']
-        new_patient = Patients(mrn, first_name, last_name, gender, zip_code)
+        new_patient = Patients(first_name, last_name, zip_code, dob, gender)
         db.session.add(new_patient)
         db.session.commit()
         flash("Patient Inserted Successfully")
@@ -242,6 +242,19 @@ def insert(): # note this function needs to match name in html form action
     else:
         flash("Something went wrong")
         return redirect(url_for('get_gui_patients'))
+
+# this endpoint is for updating our account info
+@app.route('/accupdate', methods = ['GET', 'POST'])
+def accupdate(): # note this function needs to match name in html form action
+    if request.method == 'POST':
+        acc_id = request.form.get('id')
+        acc = Users.query.filter_by(id=acc_id).first()
+        acc_user = request.form.get('username')
+        acc_email = request.form.get('email')
+        db.session.commit()
+        flash("Account Updated Successfully")
+        return redirect(url_for('account'))
+
 
 # this endpoint is for updating our patients basic info 
 @app.route('/update', methods = ['GET', 'POST'])
@@ -253,6 +266,9 @@ def update(): # note this function needs to match name in html form action
         patient.first_name = request.form.get('first_name')
         patient.last_name = request.form.get('last_name')
         patient.gender = request.form.get('gender')
+        patient.dob = request.form.get('dob')
+        patient.contact_mobile = request.form.get('contact_mobile')
+        patient.ins = request.form.get('ins')
         db.session.commit()
         flash("Patient Updated Successfully")
         return redirect(url_for('get_gui_patients'))
@@ -391,6 +407,18 @@ def update_patient(mrn):
     db.session.commit()
     return jsonify(patient.to_json())
 
+#updating Acc
+@app.route('/api/account/<string:id>', methods=['PUT'])
+def update_account(id):
+    if not request.json:
+        abort(400)
+    user = Users.query.filter_by(id=id).first()
+    if User is None:
+        abort(404)
+    acc_user = request.json.get('username', account.username)
+    acc_email = request.json.get('email', account.email)
+    db.session.commit()
+    return jsonify(account.to_json())
 
 ##### BASIC DELETE ROUTES #####
 # delete patient

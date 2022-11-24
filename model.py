@@ -69,7 +69,9 @@ class Patients(db.Model):
             'first_name': self.first_name,
             'last_name': self.last_name,
             'zip_code': self.zip_code,
-            'gender': self.gender
+            'gender': self.gender,
+            'dob' : self.dob,
+            'ins' : self.ins
         }
 
 class Conditions(db.Model):

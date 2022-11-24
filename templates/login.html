@@ -83,7 +83,6 @@
 
   <form action="{{ url_for('login') }}" method="post">
     <h1 class="h3 mb-3 fw-normal">Login</h1>
-    <input type="button" value="Go back!" onclick="history.back()">
     <div class="form-floating" style="padding: .2em">
       <input type="text" class="form-control" id="username" name="username">
       <label for="floatingInput">Username</label>
@@ -99,6 +98,7 @@
     <br />
     
     <div class="form-group">
+      <input type="button" value="Go back!" onclick="history.back()">
       <button class="btn btn-primary" type="submit" value="Login">Login</button>
       <a href="{{ url_for('register') }}" class="btn btn-primary">Register</a>
 

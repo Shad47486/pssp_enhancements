@@ -63,14 +63,7 @@
         -webkit-overflow-scrolling: touch;
       }
     </style>
-<style>
-  body {
-    background-image: url('https://images.creativemarket.com/0.1.0/ps/6189315/1820/1214/m1/fpnw/wm1/dzrx62h86ilgel8q1meaokwa8tb26gwc6ea3vrpxmmf14wdpom9wpt1zznfi7dut-.jpg?1554277597&s=ac8a21003f548f33b8e8c72551dd7fe3');
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-    background-size: 100% 100%;
-  }
-  </style>
+
     
     <!-- Custom styles for this template -->
     <!-- <link href="signin.css" rel="stylesheet"> -->
@@ -78,35 +71,38 @@
 
   </head>
   <body class="text-center">
-    
+
 <main class="form-signin w-100 m-auto">
-
-  <form action="{{ url_for('login') }}" method="post">
-    <h1 class="h3 mb-3 fw-normal">Login</h1>
-    <input type="button" value="Go back!" onclick="history.back()">
-    <div class="form-floating" style="padding: .2em">
-      <input type="text" class="form-control" id="username" name="username">
-      <label for="floatingInput">Username</label>
-    </div>
-
-    <div class="form-floating" style="padding: .2em">
-      <input type="password" class="form-control" id="password" name="password">
-      <label for="floatingPassword">Password</label>
-    </div>
-
-    <div class="msg">{{ msg }}</div>
-
-    <br />
     
-    <div class="form-group">
-      <button class="btn btn-primary" type="submit" value="Login">Login</button>
-      <a href="{{ url_for('register') }}" class="btn btn-primary">Register</a>
+    <form action="{{ url_for('register_provider') }}" method="post">
+        <h1 class="h3 mb-3 fw-normal">Care Provider Account</h1>
+        
+        <div class="form-floating" style="padding: .2em">
+            <input type="email" class="form-control" id="email" name="email" required>
+            <label for="floatingInput">Email</label>
+          </div>
+      
+          <div class="form-floating" style="padding: .2em">
+            <input type="text" class="form-control" id="username" name="username" required>
+            <label for="floatingInput">Username</label>
+          </div>
+      
+          <div class="form-floating" style="padding: .2em">
+            <input type="password" class="form-control" id="password" name="password" required>
+            <label for="floatingPassword">Password</label>
+          </div>
+      
+          <div class="msg">{{ msg }}</div>
+      
+          <br />
+          
+          <div class="form-group">
+            <button class="btn btn-primary" type="submit" value="Register">Create Care Provider Account</button>
+            <!-- <a href="{{ url_for('login') }}" class="btn btn-primary">Login</a> -->
+      
+          </div>
+      
+      
+        </form>
 
-    </div>
-
-
-  </form>
-
-</main>
-  </body>
-</html>
+    

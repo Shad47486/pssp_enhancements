@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, abort, session, send_file
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager 
+from flask_login import LoginManager
 from base64 import b64encode
 import base64
 from io import BytesIO #Converts data from Database into bytes
@@ -9,17 +9,11 @@ import os
 import datetime
 import uuid
 from model import db, Users, Patients, Conditions, Conditions_patient, Medications_patient, Medications, Patients_Photos
-
-
 load_dotenv()
-
 mysql_username = os.getenv("MYSQL_USERNAME")
 mysql_password = os.getenv("MYSQL_PASSWORD")
 mysql_host = os.getenv("MYSQL_HOSTNAME")
-
-db = SQLAlchemy()
 app = Flask(__name__)
-
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqldb://' + mysql_username + ':' + mysql_password + '@' + mysql_host + ':3306/patients'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False #allows for tracking
 app.secret_key = 'sdf#$#dfjkhdf0SDJH0df9fd98343fdfu34rf' #unique identifier 
@@ -59,6 +53,9 @@ def login():
             elif session['account_type'] == 'patient':
                 # go to /details/{{row.mrn}} 
                 return redirect(url_for('get_patient_details', mrn=session['mrn']))
+            elif session['account_type'] == 'Provider':
+                # go to /details/{{row.mrn}} 
+                return redirect(url_for('get_gui_patients', mrn=session['mrn']))
         else:
             msg = 'Incorrect username / password!'
             app.config['loggedin'] = 'false'
@@ -74,6 +71,9 @@ def register():
         elif request.form['account_type'] == 'patient':
             # redirect to patient registration page
             return redirect(url_for('register_patient'))
+        elif request.form['account_type'] == 'Provider':
+            # redirect to patient registration page
+            return redirect(url_for('register_provider'))
     elif request.method == 'POST':
         # Form is empty... (no POST data)
         msg = 'Please fill out the form!'
@@ -95,7 +95,7 @@ def register_admin():
         ## check if email already exists
         account = Users.query.filter_by(email=email).first()
         if account:
-            msg = 'Account already exists !'
+            msg = 'Account already exists !'   
         else:
             datecreated = datetime.datetime.now()
             lastlogin = datetime.datetime.now()
@@ -109,27 +109,51 @@ def register_admin():
     # Show registration form with message (if any)
     return render_template('register_admin.html', msg=msg)
 
-@app.route('/register/patient', methods=['GET', 'POST'])
-def register_patient():
-
-    db_conditions = Conditions.query.all()
-    db_medications = Medications.query.all()
-    print('count of conditions loaded: ', len(db_conditions))
-    print('count of medications loaded: ', len(db_medications))
-
+@app.route('/register/provider', methods=['GET', 'POST'])
+def register_provider():
     # Output message if something goes wrong...
     msg = ''
     # Check if "username", "password" and "email" POST requests exist (user submitted form)
     if request.method == 'POST' and 'username' in request.form and 'password' in request.form and 'email' in request.form:
-        
+        # Create variables for easy access
+        username = request.form['username']
+        password = request.form['password']
+        email = request.form['email']
+        account_type = 'Provider'
+        mrn = None
+        ## check if email already exists
+        account = Users.query.filter_by(email=email).first()
+        if account:
+            msg = 'Account already exists !'   
+        else:
+            datecreated = datetime.datetime.now()
+            lastlogin = datetime.datetime.now()
+            new_user = Users(username, password, email, account_type, mrn, datecreated, lastlogin)
+            db.session.add(new_user)
+            db.session.commit()
+            msg = "You have successfully registered a Care Provider account!"
+    elif request.method == 'POST':
+        # Form is empty... (no POST data)
+        msg = 'Please fill out the form!'
+    # Show registration form with message (if any)
+    return render_template('register_provider.html', msg=msg)
+
+@app.route('/register/patient', methods=['GET', 'POST'])
+def register_patient():
+    db_conditions = Conditions.query.all()
+    db_medications = Medications.query.all()
+    print('count of conditions loaded: ', len(db_conditions))
+    print('count of medications loaded: ', len(db_medications))
+    # Output message if something goes wrong...
+    msg = ''
+    # Check if "username", "password" and "email" POST requests exist (user submitted form)
+    if request.method == 'POST' and 'username' in request.form and 'password' in request.form and 'email' in request.form:
         mrn = str(uuid.uuid4())[:8]
         account_type = 'patient'
-
         # Fields to capture for account table
         username = request.form['username']
         password = request.form['password']
         email = request.form['email']
-
         ## Fields to capture for patient table 
         first_name = request.form['first_name']
         last_name = request.form['last_name']
@@ -137,12 +161,10 @@ def register_patient():
         dob = request.form['dob']
         gender = request.form['gender']
         contact_mobile = request.form['contact_mobile']
-        contact_home = request.form['contact_home']
-
+        insurance = request.form['ins']
         ## Fields to capture patient conditions
-        ## pt_conditions = request.form.getlist('conditions')
-        ## print('pt_conditions: ', pt_conditions)
-
+        pt_conditions = request.form.getlist('conditions')
+        print('pt_conditions: ', pt_conditions)
         ## check if email already exists in account table or contact_mobile already exists in patient table
         account = Users.query.filter_by(email=email).first()
         patient = Patients.query.filter_by(contact_mobile=contact_mobile).first()
@@ -151,27 +173,45 @@ def register_patient():
         else:
             datecreated = datetime.datetime.now()
             lastlogin = datetime.datetime.now()
-            
             new_user = Users(username, password, email, account_type, mrn, datecreated, lastlogin)
-            new_patient = Patients(mrn, first_name, last_name, zip_code, dob, gender, contact_mobile, contact_home)
-
+            new_patient = Patients(mrn, first_name, last_name, zip_code, dob, gender, contact_mobile, insurance)
             db.session.add(new_user)
             db.session.commit()
             db.session.add(new_patient)
             db.session.commit()
-
             ## then loop through each condition and add to patient_conditions table after patient has been added to pt table
-            #for condition in pt_conditions:
-                #new_patient_condition = Conditions_patient(mrn, condition)
-                #db.session.add(new_patient_condition)
-                #db.session.commit()
-
-            msg = 'You have successfully been registered as a patient in THE BEST PATIENT PORTAL EVER TO EXSIT!'
+            for condition in pt_conditions:
+                new_patient_condition = Conditions_patient(mrn, condition)
+                db.session.add(new_patient_condition)
+                db.session.commit()
+            msg = 'You have successfully registered a PATIENT account !'
     elif request.method == 'POST':
         # Form is empty... (no POST data)
         msg = 'Please fill out the form!'
     # Show registration form with message (if any)
     return render_template('register_patient.html', msg=msg, conditions=db_conditions, medications=db_medications)
+
+@app.route('/account')
+def account():
+    # Check if user is loggedin
+    if 'loggedin' in session:
+        # We need all account data for logged in user
+        account = Users.query.filter_by(id=session['id']).first()
+        # Query for user image from Patients_Photos table
+        user_image = Patients_Photos.query.filter_by(mrn=session['mrn']).first()
+        print('Account details: ', account.to_json())
+        # Show the profile page with account info
+        return render_template('account.html', account=account, user_image=user_image)
+    # User is not loggedin redirect to login page
+    return redirect(url_for('login'))
+
+@app.route('/logout')
+def logout():
+    # Remove session data, this will log the user out
+   session.pop('loggedin', None)
+   session.pop('id', None)
+   session.pop('username', None)
+   return redirect(url_for('login'))
 
 
 
@@ -179,8 +219,11 @@ def register_patient():
 ##### CREATE BASIC GUI FOR CRUD #####
 @app.route('/patients', methods=['GET'])
 def get_gui_patients():
-    returned_Patients = Patients.query.all()
-    return render_template("patient_all.html", patients = returned_Patients)
+    if 'loggedin' in session:
+        returned_Patients = Patients.query.all() # documentation for .query exists: https://docs.sqlalchemy.org/en/14/orm/query.html
+        return render_template("patient_all.html", patients = returned_Patients)
+    else:
+        return redirect(url_for('get_patient_details', mrn=session['mrn']))
 
 # this endpoint is for inserting in a new patient
 @app.route('/insert', methods = ['POST'])
@@ -254,6 +297,56 @@ def update_conditions(): # note this function needs to match name in html form a
         flash("Patient Condition Updated Successfully")
         return redirect(url_for('get_patient_details', mrn=patient_condition.mrn))
 
+# this endpoint is for adding a new condition to a patient
+@app.route('/add_condition', methods = ['GET', 'POST'])
+def add_condition(): # note this function needs to match name in html form action
+    if request.method == 'POST':
+        ## get mrn from form
+        form_mrn = request.form.get('mrn')
+        print('form_mrn', form_mrn)
+        form_icd10_code = request.form.get('icd10_code')
+        print('form_icd10_code', form_icd10_code)
+        new_condition = Conditions_patient(form_mrn, form_icd10_code)
+        db.session.add(new_condition)
+        db.session.commit()
+        flash("Patient Condition Added Successfully")
+        ## then return to patient details page
+        return redirect(url_for('get_patient_details', mrn=form_mrn))
+
+@app.route('/add_medication', methods = ['GET', 'POST'])
+def add_medication(): # note this function needs to match name in html form action
+    if request.method == 'POST':
+        ## get mrn from form
+        form_mrn = request.form.get('mrn')
+        print('form_mrn', form_mrn)
+        form_ndc_code = request.form.get('med_ndc')
+        print('form_icd10_code', form_ndc_code)
+        new_medication = Medications_patient(form_mrn, form_ndc_code)
+        db.session.add(new_medication)
+        db.session.commit()
+        flash("Patient Medication Added Successfully")
+        ## then return to patient details page
+        return redirect(url_for('get_patient_details', mrn=form_mrn))
+
+# this endpoint is for deleting a condition from a patient
+@app.route('/delete_condition', methods = ['GET', 'POST'])
+def delete_condition(): # note this function needs to match name in html form action
+    if request.method == 'POST':
+        ## get mrn from form
+        form_mrn = request.form.get('mrn')
+        form_icd10_code = request.form.get('icd10_code')
+        print('form_id', form_mrn)
+        print('form_icd10_code', form_icd10_code)
+        patient_condition = Conditions_patient.query.filter_by(mrn=form_mrn, icd10_code=form_icd10_code).all()
+        print('Found conditions: ', patient_condition)
+        for condition in patient_condition:
+            db.session.delete(condition)
+        db.session.commit()
+        flash("Patient Condition Deleted Successfully")
+        ## then return to patient details page
+        return redirect(url_for('get_patient_details', mrn=form_mrn))
+
+##### CREATE BASIC API ENDPOINTS #####
 # get all Patients
 @app.route("/api/patients/list", methods=["GET"])
 def get_patients():
